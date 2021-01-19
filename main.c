@@ -205,8 +205,15 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-	if( htim -> Instance == TIM10)
-		HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port,LED_BLUE_Pin);
+	static uint8_t counter;
+	counter ++;
+
+	if (counter == 10){
+		counter = 0;
+		if( htim -> Instance == TIM10)
+				HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port,LED_BLUE_Pin);
+	}
+
 }
 /* USER CODE END 4 */
 
