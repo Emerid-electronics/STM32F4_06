@@ -53,7 +53,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM10_Init(void);
 /* USER CODE BEGIN PFP */
-
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -91,7 +91,7 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_Base_Start_IT(&htim10);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -204,7 +204,10 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if( htim -> Instance == TIM10)
+		HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port,LED_BLUE_Pin);
+}
 /* USER CODE END 4 */
 
 /**
