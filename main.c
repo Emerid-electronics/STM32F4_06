@@ -64,6 +64,7 @@ static void MX_ADC1_Init(void);
 static void MX_TIM10_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 float temp_calc(uint16_t ADC_temperature);
 /* USER CODE END PFP */
 
@@ -105,62 +106,80 @@ int main(void)
   MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1,data_ADC,3);
-  HAL_TIM_Base_Start_IT(&htim10);
+  HAL_TIM_Base_Start_IT(&htim10); //TIM10 start
   /* USER CODE END 2 */
-
+  uint8_t alarm_flag_tmp = 0;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
+	  alarm_flag_tmp = alarm_flag;
+
 		if (temp_calc(data_ADC[0]) < 30.0) {
 			alarm_flag = 0;
+		}
+		else if (temp_calc(data_ADC[0]) < 29.0){
+			alarm_flag = 0;
 			alarm_reset_flag = 0;
-		} else {
+		}
+		else {
 			alarm_flag = 1;
-			HAL_GPIO_WritePin(GPIOD,
-			LED_BLUE_Pin | LED_GREEN_Pin | LED_ORANGE_Pin | LED_RED_Pin,
-					GPIO_PIN_RESET);
+			//HAL_GPIO_WritePin(GPIOD,
+			//LED_BLUE_Pin | LED_GREEN_Pin | LED_ORANGE_Pin | LED_RED_Pin,
+			//		GPIO_PIN_RESET);
 		}
 
-		while (alarm_flag && !alarm_reset_flag) {
-			HAL_GPIO_TogglePin(GPIOD,
-					LED_BLUE_Pin | LED_GREEN_Pin | LED_ORANGE_Pin | LED_RED_Pin);
-			temp_calc(data_ADC[0]);
-			HAL_Delay(333);
+		//if ((!alarm_flag_tmp && alarm_flag) && !alarm_reset_flag) {
+
+		//}
+		//else HAL_TIM_Base_Stop_IT(&htim10);
+
+		if (!alarm_flag && !alarm_reset_flag){
+			if (data_ADC[1] > 3000) { //0.75 * 4095 = 3000+ Vx
+				HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,
+						(GPIO_PIN_SET && !inv_SW)
+								|| (GPIO_PIN_RESET && inv_SW)); //a~b + ~ab, gdzie a = SET, b = inv_SW
+				HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,
+						(GPIO_PIN_RESET && !inv_SW)
+								|| (GPIO_PIN_SET && inv_SW)); //a~b + ~ab, gdzie a = RESET, b = inv_SW
+			} else if (data_ADC[1] < 1000) { //0.25 * 4095 = 1000
+				HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,
+						(GPIO_PIN_RESET && !inv_SW)
+								|| (GPIO_PIN_SET && inv_SW));
+				HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,
+						(GPIO_PIN_SET && !inv_SW)
+								|| (GPIO_PIN_RESET && inv_SW));
+			} else {
+				HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,
+						GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,
+						GPIO_PIN_RESET);
+			}
+
+			if (data_ADC[2] < 1000) { //Vy
+				HAL_GPIO_WritePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin,
+						(GPIO_PIN_SET && !inv_SW)
+								|| (GPIO_PIN_RESET && inv_SW));
+				HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin,
+						(GPIO_PIN_RESET && !inv_SW)
+								|| (GPIO_PIN_SET && inv_SW));
+			} else if (data_ADC[2] > 3000) {
+				HAL_GPIO_WritePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin,
+						(GPIO_PIN_RESET && !inv_SW)
+								|| (GPIO_PIN_SET && inv_SW));
+				HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin,
+						(GPIO_PIN_SET && !inv_SW)
+								|| (GPIO_PIN_RESET && inv_SW));
+			} else {
+				HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin,
+						GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin,
+						GPIO_PIN_RESET);
+			}
+
 		}
 
-		if (data_ADC[1] > 3000) { //0.75 * 4095 = 3000+ Vx
-			HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,
-					(GPIO_PIN_SET && !inv_SW) || (GPIO_PIN_RESET && inv_SW)); //a~b + ~ab, gdzie a = SET, b = inv_SW
-			HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,
-					(GPIO_PIN_RESET && !inv_SW) || (GPIO_PIN_SET && inv_SW)); //a~b + ~ab, gdzie a = RESET, b = inv_SW
-		} else if (data_ADC[1] < 1000) { //0.25 * 4095 = 1000
-			HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,
-					(GPIO_PIN_RESET && !inv_SW) || (GPIO_PIN_SET && inv_SW));
-			HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,
-					(GPIO_PIN_SET && !inv_SW) || (GPIO_PIN_RESET && inv_SW));
-		} else {
-			HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,
-					GPIO_PIN_RESET);
-		}
-
-		if (data_ADC[2] < 1000) { //Vy
-			HAL_GPIO_WritePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin,
-					(GPIO_PIN_SET && !inv_SW) || (GPIO_PIN_RESET && inv_SW));
-			HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin,
-					(GPIO_PIN_RESET && !inv_SW) || (GPIO_PIN_SET && inv_SW));
-		} else if (data_ADC[2] > 3000) {
-			HAL_GPIO_WritePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin,
-					(GPIO_PIN_RESET && !inv_SW) || (GPIO_PIN_SET && inv_SW));
-			HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin,
-					(GPIO_PIN_SET && !inv_SW) || (GPIO_PIN_RESET && inv_SW));
-		} else {
-			HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(LED_ORANGE_GPIO_Port, LED_ORANGE_Pin,
-					GPIO_PIN_RESET);
-		}
 
     /* USER CODE BEGIN 3 */
   }
@@ -291,9 +310,9 @@ static void MX_TIM10_Init(void)
 
   /* USER CODE END TIM10_Init 1 */
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 9999;
+  htim10.Init.Prescaler = 49999; //100Mhz / 50k = 2kHz
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 4999;
+  htim10.Init.Period = 9999; //2kHz / 10k = 0.2 Hz
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
@@ -367,6 +386,26 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	static uint8_t counter_TIM10 = 0;
+	if(htim -> Instance == TIM10 && alarm_flag){
+
+		HAL_GPIO_TogglePin(GPIOD, 1 << (12 + counter_TIM10 % 4));
+		//counter_TIM10 % 4 - generacja liczb 0 - 3
+		//4 + counter_TIM10 % 4 - generacja liczb 12 - 15
+		//1 << (4 + counter_TIM10 % 4) przesuniecie bitowe 0000 0000 0000 0001 o 12 - 15 miejsc w lewo - odpowiednio wynik 0x1000 lub 0x2000 lub 0x4000 lub 0x8000
+		//LED_GREEN_PIN = 0x1000 | LED_ORANGE_Pin = 0x2000 | LED_RED_Pin = 0x4000 | LED_BLUE_Pin = 0x8000
+
+		counter_TIM10++;
+
+		if (counter_TIM10 == 8){
+			counter_TIM10 = 0;
+		//	HAL_TIM_Base_Stop_IT(&htim10);
+		}
+	}
+
+}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == BUTTON_USER_Pin)
 		alarm_reset_flag = 1;
