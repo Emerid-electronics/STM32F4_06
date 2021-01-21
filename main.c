@@ -125,9 +125,10 @@ int main(void)
 		}
 		else {
 			alarm_flag = 1;
-			//HAL_GPIO_WritePin(GPIOD,
-			//LED_BLUE_Pin | LED_GREEN_Pin | LED_ORANGE_Pin | LED_RED_Pin,
-			//		GPIO_PIN_RESET);
+			if ((!alarm_flag_tmp && alarm_flag) && !alarm_reset_flag) //!alarm_flag_tmp && alarm_flag - zbocze narastajace alarm_flag - pierwsze uruchomienie
+				HAL_GPIO_WritePin(GPIOD,
+						LED_BLUE_Pin | LED_GREEN_Pin | LED_ORANGE_Pin
+								| LED_RED_Pin, GPIO_PIN_RESET);
 		}
 
 		//if ((!alarm_flag_tmp && alarm_flag) && !alarm_reset_flag) {
